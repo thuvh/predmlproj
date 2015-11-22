@@ -1,0 +1,90 @@
+---
+title: "Human Activity Prediction"
+author: "Hoai-Thu Vuong"
+date: "November 22, 2015"
+output: html_document
+---
+
+# Introduction
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. By observing these data, we can find patterns in our behavior, then we can improve our healthy. In this project, we will apply machine learning to find out some patterns, or practice what we learned. 
+
+# Preprocessing
+## Libraries
+Firstly, we need load some libraries, for preprocessing, and creating model.
+```{r, cache=TRUE, echo=TRUE}
+library(caret)
+library(kernlab)
+library(randomForest)
+library(corrplot)
+library(rpart)
+
+```
+
+## Read the data
+```{r, cache=TRUE, echo=TRUE}
+trainRaw <- read.csv("pml-training.csv", na.strings=c("NA", "", " "))
+testRaw <- read.csv("pml-testing.csv", na.strings=c("NA", "", " "))
+```
+We will have a first look at the raw data set before cleaning.
+
+```{r, cache=TRUE, echo=TRUE}
+dim(trainRaw)
+names(trainRaw)
+```
+
+## Cleaning
+We can see that, there are some many NA values in this dataset, then we apply function to remove this features, because, NA values are not valuable and make wrong model. This data is collected by six participants, we also remove the personal data such as user_name, etc...
+
+```{r, cache=TRUE, echo=TRUE}
+na_stat <- sapply(trainRaw, function(x){sum(is.na(x))})
+trainData <- trainRaw[, which(na_stat == 0)]
+trainData <- trainData[8:length(trainData)]
+
+na_stat_test <- sapply(testRaw, function(x){sum(is.na(x))})
+testData <- testRaw[, which(na_stat_test == 0)]
+testData <- testData[8:length(testData)]
+```
+
+# Build Model
+## Make training and testing data set
+The test dataset, without classe column will be used for prediction in final. Sothat, we should split the labeled data to build and validate model.
+
+```{r, cache=TRUE, echo=FALSE}
+inTrain <- createDataPartition(y=trainData$classe, p=0.7, list=FALSE)
+training <- trainData[inTrain, ]
+testing <- trainData[-inTrain, ]
+```
+
+Before building model, we make a correlation matrix, to show the relation ship between variables.
+```{r, cache=TRUE, echo=FALSE}
+corMatrix <- cor(training[, -length(names(training))])
+corrplot(corMatrix, method="square", type="lower", tl.cex=.6)
+```
+
+We can see that, the variables do not depend so much on each other. So, we will keep all variables for the model and do not apply PCA, to reduce the dimension of these variables.
+
+## Models
+We generated Random Forest and Linear Discriminant Model to compare the results.
+
+```{r, cache=TRUE, echo=FALSE}
+modLDA <- train(classe ~ ., data=training, method="lda")
+modRf <- train(classe ~ ., data=training, method="rf")
+```
+
+## Evaluation
+And this is the result.
+
+```{r, cache=TRUE, echo=FALSE}
+lda <- predict(modLDA, testing)
+confusionMatrix(lda, testing$classe)
+
+rf <- predict(modRf, testing)
+confusionMatrix(rf, testing$classe)
+```
+
+# Conclusion
+In this project, we could apply machine learning method with R for pattern detection in human activity, which is collected by wearable devices. The models achive high accuracy after buidling model. This is a result of many assumptions, and we should test with other parameters or applying PCA to findout which is the best features.
+
+
+
+
